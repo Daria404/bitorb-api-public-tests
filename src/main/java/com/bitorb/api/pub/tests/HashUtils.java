@@ -39,4 +39,15 @@ public class HashUtils {
             return null;
         }
     }
+
+    public static void main(String[] args) {
+        String s = "!/f31<rq)6OdPF>KuySkqu3bFTHj+@_$eXjc+;UcxT%j8Y&G_%LlZS!>5SEn40kuA6_DUI((!@VeOsyK/h0P!p-wV7WvO?!7Lxq%vgZ5I!>!o*2T1mF!Y+FnVmp%wXjbu#cSr!9;Z8BIGXzPV.(knuh.PI;+GAxTl1!i-zcSy#l/rJ!.<m3s@aopL/.!k!fGQCky#T<h68W/TOk6oh#RV!l0fxfH3!s6wp%>%eB1fNG(Svxd-X0@'t%0oV/!2-z;#zvvPjPo9SAjCQnm.B+cvJyW'wR*k<AgC'h8HVl;+JPd+#ZwVecf(J#1k_XgHa1611749038759/api/v1/order\"clientReqID\":1,\"symbol\":\"BTC_USD_P0\",\"side\":\"SELL\",\"qty\":1.0,\"ordType\":\"2\",\"leverage\":100.0,\"price\":31200.0";
+        String m = "12345";
+
+        String secretHash = getSecretHash(m, s);
+        System.err.println(secretHash);
+
+
+        System.err.println("mlkpiv11c/gvcPbL51+tESZdE0sSoyQxkJz/b4Ri2sY=".equals(secretHash));
+    }
 }

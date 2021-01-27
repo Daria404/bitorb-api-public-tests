@@ -14,25 +14,24 @@ import static org.junit.Assert.fail;
 
 
 public class TestExample  {
-    private static final String HOST = "trade.bitorb.com";
+    private static final String HOST = "devcomp.bitorb.com";
     private static final String REQUEST_PATH = "/api/v1/order";
-    private static final String contracturl = "http://" + HOST  + ":9090" + REQUEST_PATH;
-    private static final String APISECRET = "apisecret"; //TODO
-    private static final String APIKEY = "ABCKEY"; //TODO
+    private static final String contracturl = "https://" + HOST + REQUEST_PATH;
+    private static final String APISECRET = "12345"; //TODO
+    private static final String APIKEY = "!/f31<rq)6OdPF>KuySkqu3bFTHj+@_$eXjc+;UcxT%j8Y&G_%LlZS!>5SEn40kuA6_DUI((!@VeOsyK/h0P!p-wV7WvO?!7Lxq%vgZ5I!>!o*2T1mF!Y+FnVmp%wXjbu#cSr!9;Z8BIGXzPV.(knuh.PI;+GAxTl1!i-zcSy#l/rJ!.<m3s@aopL/.!k!fGQCky#T<h68W/TOk6oh#RV!l0fxfH3!s6wp%>%eB1fNG(Svxd-X0@'t%0oV/!2-z;#zvvPjPo9SAjCQnm.B+cvJyW'wR*k<AgC'h8HVl;+JPd+#ZwVecf(J#1k_XgHa"; //TODO
     private static final String USER = "testuser";
     private final OkHttpClient client = new OkHttpClient();
 
     @Test
     public void testCreateOrder() {
-        final long clReqId = 1;
-
         final String body = asJson(w -> w
-                .write("clientReqID").int64(clReqId)
+                .write("clientReqID").int64(1)
                 .write("symbol").text("BTC_USD_P0")
                 .write("side").text("SELL")
-                .write("qty").float64(100.0)
+                .write("qty").float64(1.0)
+                .write("ordType").character('2')
                 .write("leverage").float64(100.0)
-                .write("price").float64(8000.0)
+                .write("price").float64(31200)
         ).toString();
 
         String expires = "" + (System.currentTimeMillis() + 60_000);
@@ -48,7 +47,7 @@ public class TestExample  {
                 .build();
 
         try (Response resp = client.newCall(request).execute()) {
-            assertTrue(resp.isSuccessful());
+            assertTrue(resp.toString(), resp.isSuccessful());
 //            assertEquals(Side.SELL, createOrder.side());
 //            assertEquals(100.0, createOrder.qty(), 0.000001);
 //            assertEquals(100.0, createOrder.leverage(), 0.000001);
