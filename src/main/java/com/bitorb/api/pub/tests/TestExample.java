@@ -12,8 +12,7 @@ import java.io.IOException;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-
-public class TestExample  {
+public class TestExample extends WebSocketListener {
     private static final String HOST = "devcomp.bitorb.com";
     private static final String REQUEST_PATH = "/api/v1";
     private static final String contracturl = "https://" + HOST + REQUEST_PATH;
@@ -21,6 +20,7 @@ public class TestExample  {
     private static final String APIKEY = "!/f31<rq)6OdPF>KuySkqu3bFTHj+@_$eXjc+;UcxT%j8Y&G_%LlZS!>5SEn40kuA6_DUI((!@VeOsyK/h0P!p-wV7WvO?!7Lxq%vgZ5I!>!o*2T1mF!Y+FnVmp%wXjbu#cSr!9;Z8BIGXzPV.(knuh.PI;+GAxTl1!i-zcSy#l/rJ!.<m3s@aopL/.!k!fGQCky#T<h68W/TOk6oh#RV!l0fxfH3!s6wp%>%eB1fNG(Svxd-X0@'t%0oV/!2-z;#zvvPjPo9SAjCQnm.B+cvJyW'wR*k<AgC'h8HVl;+JPd+#ZwVecf(J#1k_XgHa"; //TODO
     private static final String USER = "testuser";
     private final OkHttpClient client = new OkHttpClient();
+    private final OkHttpClient websocketClient = new OkHttpClient.Builder().pingInterval(java.time.Duration.ofSeconds(5)).build();
 
     @Test
     public void testSymbolInfo() {
@@ -36,14 +36,28 @@ public class TestExample  {
                 .header("api-signature", signature)
                 .build();
 
+        TestExample socketlistener = new TestExample();
+        WebSocket webSocket = websocketClient.newWebSocket(request, socketlistener);
+        boolean subscribed = webSocket.send(
+                "{" +
+                        "op: subscribe, " +
+                        "args: { " +
+                        "streams: trade,book" + // funding, account
+                        "symbols: BTC_USD_P0" + // If no specific symbol(s) then will receive all symbols
+                        "}" +
+                        "}");
+
         try (Response resp = client.newCall(request).execute()) {
             assertTrue(resp.toString(), resp.isSuccessful());
             System.out.println(resp.code());
-
+            socketlistener.onOpen(webSocket, resp);
+            socketlistener.onMessage(webSocket, "test");
+            System.out.println(webSocket.request());
         } catch (IOException ex) {
             fail("Error: " + ex);
         }
     }
+
     @Test
     public void userWallet() {
         String expires = "" + (System.currentTimeMillis() + 60_000);
