@@ -15,12 +15,57 @@ import static org.junit.Assert.fail;
 
 public class TestExample  {
     private static final String HOST = "devcomp.bitorb.com";
-    private static final String REQUEST_PATH = "/api/v1/order";
+    private static final String REQUEST_PATH = "/api/v1";
     private static final String contracturl = "https://" + HOST + REQUEST_PATH;
     private static final String APISECRET = "12345"; //TODO
     private static final String APIKEY = "!/f31<rq)6OdPF>KuySkqu3bFTHj+@_$eXjc+;UcxT%j8Y&G_%LlZS!>5SEn40kuA6_DUI((!@VeOsyK/h0P!p-wV7WvO?!7Lxq%vgZ5I!>!o*2T1mF!Y+FnVmp%wXjbu#cSr!9;Z8BIGXzPV.(knuh.PI;+GAxTl1!i-zcSy#l/rJ!.<m3s@aopL/.!k!fGQCky#T<h68W/TOk6oh#RV!l0fxfH3!s6wp%>%eB1fNG(Svxd-X0@'t%0oV/!2-z;#zvvPjPo9SAjCQnm.B+cvJyW'wR*k<AgC'h8HVl;+JPd+#ZwVecf(J#1k_XgHa"; //TODO
     private static final String USER = "testuser";
     private final OkHttpClient client = new OkHttpClient();
+
+    @Test
+    public void testSymbolInfo() {
+        String expires = "" + (System.currentTimeMillis() + 60_000);
+
+        final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + "/symbolInfo");
+
+        final Request request = new Request.Builder()
+                .url(contracturl + "/symbolInfo")
+                .get()
+                .header("api-key", APIKEY)
+                .header("api-expires", expires)
+                .header("api-signature", signature)
+                .build();
+
+        try (Response resp = client.newCall(request).execute()) {
+            assertTrue(resp.toString(), resp.isSuccessful());
+            System.out.println(resp.code());
+
+        } catch (IOException ex) {
+            fail("Error: " + ex);
+        }
+    }
+    @Test
+    public void userWallet() {
+        String expires = "" + (System.currentTimeMillis() + 60_000);
+
+        final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + "/user/wallet");
+
+        final Request request = new Request.Builder()
+                .url(contracturl + "/user/wallet")
+                .get()
+                .header("api-key", APIKEY)
+                .header("api-expires", expires)
+                .header("api-signature", signature)
+                .build();
+
+        try (Response resp = client.newCall(request).execute()) {
+            assertTrue(resp.toString(), resp.isSuccessful());
+            System.out.println(resp.code());
+
+        } catch (IOException ex) {
+            fail("Error: " + ex);
+        }
+    }
 
     @Test
     public void testCreateOrder() {
@@ -36,10 +81,10 @@ public class TestExample  {
 
         String expires = "" + (System.currentTimeMillis() + 60_000);
 
-        final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + body);
+        final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + "/order" + body);
 
         final Request request = new Request.Builder()
-                .url(contracturl)
+                .url(contracturl + "/order")
                 .post(RequestBody.create(MediaType.get("application/json"), body))
                 .header("api-key", APIKEY)
                 .header("api-expires", expires)
@@ -47,6 +92,7 @@ public class TestExample  {
                 .build();
 
         try (Response resp = client.newCall(request).execute()) {
+            System.out.println(resp.code());
             assertTrue(resp.toString(), resp.isSuccessful());
 //            assertEquals(Side.SELL, createOrder.side());
 //            assertEquals(100.0, createOrder.qty(), 0.000001);
@@ -81,6 +127,7 @@ public class TestExample  {
                 .build();
 
         try (Response resp = client.newCall(request).execute()) {
+            System.out.println(resp.code());
             assertTrue(resp.isSuccessful());
 //            assertEquals(clOrdID, unwindOrder.clOrdID());
 //            assertTrue(Double.isNaN(unwindOrder.qty()));
