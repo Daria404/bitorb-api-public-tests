@@ -1,5 +1,8 @@
 package com.bitorb.api.pub.tests;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.wire.WireType;
 import net.openhft.chronicle.wire.Wires;
@@ -8,17 +11,19 @@ import okhttp3.*;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+import org.junit.runner.RunWith;
+
 import java.io.IOException;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+@RunWith(Parameterized.class)
 public class TestExample extends WebSocketListener {
-//    private static final String HOST = "devcomp.bitorb.com";
-    private static final String HOST = "localhost:9090";
-    private static final String REQUEST_PATH = "/api/v1";
-    private static final String contracturl = "http://" + HOST + REQUEST_PATH;
-    private static final String SUBSCRIBE_PATH = "/api/v1/subscribe";
+    private static String HOST;
+
     private static final String APISECRET = "marketmaker"; //TODO
     private static final String USER = "mmsecret";
     private static final String APIKEY = "marketmaker";
@@ -26,10 +31,31 @@ public class TestExample extends WebSocketListener {
 //    private static final String USER = "testuser";
     private final OkHttpClient client = new OkHttpClient();
     private final OkHttpClient websocketClient = new OkHttpClient.Builder().pingInterval(java.time.Duration.ofSeconds(5)).build();
+    private static boolean expectedResult;
+    private static boolean test;
+
+    public TestExample(String HOST, Boolean expectedResult) {
+        TestExample.HOST = HOST;
+        TestExample.expectedResult = expectedResult;
+    }
+
+    @Parameterized.Parameters
+    public static Collection testResults() {
+        return Arrays.asList(new Object[][]{
+                {"devcomp.bitorb.com", false},
+                {"localhost:9090", true},
+                {"trade.bitorb.com", true}
+        });
+    }
+
+    private static final String REQUEST_PATH = "/api/v1";
+    private static final String contracturl = "http://" + HOST + REQUEST_PATH;
+
+    private static final String SUBSCRIBE_PATH = "/api/v1/subscribe";
 
     @Override
     public void onOpen(WebSocket webSocket, Response response) {
-        boolean test = webSocket.send(
+        test = webSocket.send(
                 "{" +
                         "op: subscribe, " +
                         "args: { " +
@@ -37,7 +63,7 @@ public class TestExample extends WebSocketListener {
                         "symbols: BTC_USD_P0" + // If no specific symbol(s) then will receive all symbols
                         "}" +
                         "}");
-//        boolean test = webSocket.send("test");
+//      test = webSocket.send("test");
         System.out.println(test);
     }
     @Override
@@ -58,18 +84,18 @@ public class TestExample extends WebSocketListener {
     @Test
     public void testSymbolInfo() throws InterruptedException {
         String expires = "" + (System.currentTimeMillis() + 60_000);
+        final String socketURL = "ws://" + HOST + SUBSCRIBE_PATH;
 
         final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + SUBSCRIBE_PATH);
 
         final Request request = new Request.Builder()
-                .url("ws://" + HOST + SUBSCRIBE_PATH)
+                .url(socketURL)
                 .header("api-key", APIKEY)
                 .header("api-expires", expires)
                 .header("api-signature", signature)
                 .build();
-
         WebSocket webSocket = websocketClient.newWebSocket(request, this);
-        Thread.sleep(10000);
+        Thread.sleep(8000);
 
     }
 
