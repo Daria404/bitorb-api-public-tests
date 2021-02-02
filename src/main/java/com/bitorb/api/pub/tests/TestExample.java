@@ -14,25 +14,37 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestExample extends WebSocketListener {
-    private static final String HOST = "devcomp.bitorb.com";
+//    private static final String HOST = "devcomp.bitorb.com";
+    private static final String HOST = "localhost:9090";
     private static final String REQUEST_PATH = "/api/v1";
-    private static final String contracturl = "https://" + HOST + REQUEST_PATH;
+    private static final String contracturl = "http://" + HOST + REQUEST_PATH;
     private static final String SUBSCRIBE_PATH = "/api/v1/subscribe";
-    private static final String APISECRET = "12345"; //TODO
-    private static final String APIKEY = "!/f31<rq)6OdPF>KuySkqu3bFTHj+@_$eXjc+;UcxT%j8Y&G_%LlZS!>5SEn40kuA6_DUI((!@VeOsyK/h0P!p-wV7WvO?!7Lxq%vgZ5I!>!o*2T1mF!Y+FnVmp%wXjbu#cSr!9;Z8BIGXzPV.(knuh.PI;+GAxTl1!i-zcSy#l/rJ!.<m3s@aopL/.!k!fGQCky#T<h68W/TOk6oh#RV!l0fxfH3!s6wp%>%eB1fNG(Svxd-X0@'t%0oV/!2-z;#zvvPjPo9SAjCQnm.B+cvJyW'wR*k<AgC'h8HVl;+JPd+#ZwVecf(J#1k_XgHa"; //TODO
-    private static final String USER = "testuser";
+    private static final String APISECRET = "marketmaker"; //TODO
+    private static final String USER = "mmsecret";
+    private static final String APIKEY = "marketmaker";
+//    private static final String APIKEY = "!/f31<rq)6OdPF>KuySkqu3bFTHj+@_$eXjc+;UcxT%j8Y&G_%LlZS!>5SEn40kuA6_DUI((!@VeOsyK/h0P!p-wV7WvO?!7Lxq%vgZ5I!>!o*2T1mF!Y+FnVmp%wXjbu#cSr!9;Z8BIGXzPV.(knuh.PI;+GAxTl1!i-zcSy#l/rJ!.<m3s@aopL/.!k!fGQCky#T<h68W/TOk6oh#RV!l0fxfH3!s6wp%>%eB1fNG(Svxd-X0@'t%0oV/!2-z;#zvvPjPo9SAjCQnm.B+cvJyW'wR*k<AgC'h8HVl;+JPd+#ZwVecf(J#1k_XgHa"; //TODO
+//    private static final String USER = "testuser";
     private final OkHttpClient client = new OkHttpClient();
     private final OkHttpClient websocketClient = new OkHttpClient.Builder().pingInterval(java.time.Duration.ofSeconds(5)).build();
 
     @Override
     public void onOpen(WebSocket webSocket, Response response) {
-        boolean test = webSocket.send("test");
+        boolean test = webSocket.send(
+                "{" +
+                        "op: subscribe, " +
+                        "args: { " +
+                        "streams: trade,book" + // funding, account
+                        "symbols: BTC_USD_P0" + // If no specific symbol(s) then will receive all symbols
+                        "}" +
+                        "}");
+//        boolean test = webSocket.send("test");
         System.out.println(test);
     }
     @Override
     public void onMessage(WebSocket webSocket, String text) {
         System.out.println("Received message:" + text);
     }
+
     @Override
     public void onClosed(WebSocket webSocket, int code, String reason) {
         webSocket.close(1000, "bye");
@@ -50,32 +62,16 @@ public class TestExample extends WebSocketListener {
         final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + SUBSCRIBE_PATH);
 
         final Request request = new Request.Builder()
-                .url("wss://" + HOST + SUBSCRIBE_PATH)
+                .url("ws://" + HOST + SUBSCRIBE_PATH)
                 .header("api-key", APIKEY)
                 .header("api-expires", expires)
                 .header("api-signature", signature)
                 .build();
 
-//        TestExample socketlistener = new TestExample();
         WebSocket webSocket = websocketClient.newWebSocket(request, this);
         Thread.sleep(10000);
-        boolean subscribed = webSocket.send(
-                "{" +
-                        "op: subscribe, " +
-                        "args: { " +
-                        "streams: trade,book" + // funding, account
-                        "symbols: BTC_USD_P0" + // If no specific symbol(s) then will receive all symbols
-                        "}" +
-                        "}");
-//        System.out.println(subscribed);
 
-//       try (Response resp = client.newCall(request).execute()) {
-//            assertTrue(resp.toString(), resp.isSuccessful());
-//
-//       } catch (IOException ex) {
-//           fail("Error: " + ex);
-//       }
-       }
+    }
 
     @Test
     public void userWallet() {
