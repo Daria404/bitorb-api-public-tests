@@ -23,39 +23,33 @@ import static org.junit.Assert.fail;
 @RunWith(Parameterized.class)
 public class TestExample extends WebSocketListener {
     private static String HOST;
-
-    private static final String APISECRET = "marketmaker"; //TODO
-    private static final String USER = "mmsecret";
+    private static final String APISECRET = "mmsecret"; //TODO
+    private static final String USER = "marketmaker";
     private static final String APIKEY = "marketmaker";
 //    private static final String APIKEY = "!/f31<rq)6OdPF>KuySkqu3bFTHj+@_$eXjc+;UcxT%j8Y&G_%LlZS!>5SEn40kuA6_DUI((!@VeOsyK/h0P!p-wV7WvO?!7Lxq%vgZ5I!>!o*2T1mF!Y+FnVmp%wXjbu#cSr!9;Z8BIGXzPV.(knuh.PI;+GAxTl1!i-zcSy#l/rJ!.<m3s@aopL/.!k!fGQCky#T<h68W/TOk6oh#RV!l0fxfH3!s6wp%>%eB1fNG(Svxd-X0@'t%0oV/!2-z;#zvvPjPo9SAjCQnm.B+cvJyW'wR*k<AgC'h8HVl;+JPd+#ZwVecf(J#1k_XgHa"; //TODO
 //    private static final String USER = "testuser";
     private final OkHttpClient client = new OkHttpClient();
     private final OkHttpClient websocketClient = new OkHttpClient.Builder().pingInterval(java.time.Duration.ofSeconds(5)).build();
-    private static boolean expectedResult;
-    private static boolean test;
 
-    public TestExample(String HOST, Boolean expectedResult) {
+    public TestExample(String HOST) {
         TestExample.HOST = HOST;
-        TestExample.expectedResult = expectedResult;
     }
 
     @Parameterized.Parameters
     public static Collection testResults() {
         return Arrays.asList(new Object[][]{
-                {"devcomp.bitorb.com", false},
-                {"localhost:9090", true},
-                {"trade.bitorb.com", true}
+//                {"devcomp.bitorb.com"},
+                {"localhost:9090"},
+//                {"trade.bitorb.com"}
         });
     }
 
-    private static final String REQUEST_PATH = "/api/v1";
-    private static final String contracturl = "http://" + HOST + REQUEST_PATH;
-
+    private static final String REQUEST_PATH = "/api/v1/order";
     private static final String SUBSCRIBE_PATH = "/api/v1/subscribe";
 
     @Override
     public void onOpen(WebSocket webSocket, Response response) {
-        test = webSocket.send(
+        boolean test = webSocket.send(
                 "{" +
                         "op: subscribe, " +
                         "args: { " +
@@ -63,12 +57,11 @@ public class TestExample extends WebSocketListener {
                         "symbols: BTC_USD_P0" + // If no specific symbol(s) then will receive all symbols
                         "}" +
                         "}");
-//      test = webSocket.send("test");
-        System.out.println(test);
     }
+
     @Override
     public void onMessage(WebSocket webSocket, String text) {
-        System.out.println("Received message:" + text);
+        System.out.println(text);
     }
 
     @Override
@@ -95,30 +88,24 @@ public class TestExample extends WebSocketListener {
                 .header("api-signature", signature)
                 .build();
         WebSocket webSocket = websocketClient.newWebSocket(request, this);
-        Thread.sleep(8000);
-
+        Thread.sleep(10000);
     }
 
     @Test
-    public void userWallet() {
+    public void userWallet() throws InterruptedException {
         String expires = "" + (System.currentTimeMillis() + 60_000);
-
-        final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + "/user/wallet");
+        final String socketURL = "ws://" + HOST + "/api/v1/user/wallet";
+        final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + "/api/v1/user/wallet");
 
         final Request request = new Request.Builder()
-                .url(contracturl + "/user/wallet")
-                .get()
+                .url(socketURL)
                 .header("api-key", APIKEY)
                 .header("api-expires", expires)
                 .header("api-signature", signature)
                 .build();
 
-        try (Response resp = client.newCall(request).execute()) {
-            assertTrue(resp.toString(), resp.isSuccessful());
-
-        } catch (IOException ex) {
-            fail("Error: " + ex);
-        }
+        WebSocket webSocket = websocketClient.newWebSocket(request, this);
+        Thread.sleep(8000);
     }
 
     @Test
@@ -128,17 +115,17 @@ public class TestExample extends WebSocketListener {
                 .write("symbol").text("BTC_USD_P0")
                 .write("side").text("SELL")
                 .write("qty").float64(1.0)
-                .write("ordType").character('2')
                 .write("leverage").float64(100.0)
-                .write("price").float64(31200)
+                .write("price").float64(42500)
         ).toString();
 
         String expires = "" + (System.currentTimeMillis() + 60_000);
+        final String contracturl = "http://" + HOST + REQUEST_PATH;
 
-        final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + "/order" + body);
+        final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + body);
 
         final Request request = new Request.Builder()
-                .url(contracturl + "/order")
+                .url(contracturl)
                 .post(RequestBody.create(MediaType.get("application/json"), body))
                 .header("api-key", APIKEY)
                 .header("api-expires", expires)
@@ -168,6 +155,7 @@ public class TestExample extends WebSocketListener {
         ).toString();
 
         String expires = "" + (System.currentTimeMillis() + 60_000);
+        final String contracturl = "http://" + HOST + REQUEST_PATH;
 
         final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + "/marketClose" + body);
 
@@ -202,6 +190,7 @@ public class TestExample extends WebSocketListener {
         ).toString();
 
         String expires = "" + (System.currentTimeMillis() + 60_000);
+        final String contracturl = "http://" + HOST + REQUEST_PATH;
 
         final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + body);
 
@@ -236,6 +225,7 @@ public class TestExample extends WebSocketListener {
         ).toString();
 
         String expires = "" + (System.currentTimeMillis() + 60_000);
+        final String contracturl = "http://" + HOST + REQUEST_PATH;
 
         final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + body);
 
@@ -262,3 +252,4 @@ public class TestExample extends WebSocketListener {
         return bytes;
     }
 }
+
