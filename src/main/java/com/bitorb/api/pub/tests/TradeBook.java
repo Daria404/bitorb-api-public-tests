@@ -1,13 +1,8 @@
 package com.bitorb.api.pub.tests;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
-import net.openhft.chronicle.wire.WriteMarshallable;
 import okhttp3.*;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,6 +10,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -76,7 +72,7 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
     private static final String SUBSCRIBE_PATH = "/api/v1/subscribe";
 
 
-    public void webSocket() throws InterruptedException {
+    public void webSocket() {
 
         String expires = "" + (System.currentTimeMillis() + 60_000);
         final String socketURL = "ws://" + HOST + SUBSCRIBE_PATH;
@@ -89,13 +85,18 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
                 .header("api-expires", expires)
                 .header("api-signature", signature)
                 .build();
-        WebSocket webSocket = websocketClient.newWebSocket(request, this);
+        try {
+            WebSocket webSocket = websocketClient.newWebSocket(request, this);
+            Thread.sleep(5000);
+        } catch (InterruptedException ex) {
+            System.out.println(ex.toString());
+        }
 
-        Thread.sleep(5000);
     }
 
-    public Order createOrder(CreateOrder createOrder) throws InterruptedException {
+    public Order createOrder(CreateOrder createOrder) {
         String body = createOrder.getBody();
+
         String expires = "" + (System.currentTimeMillis() + 60_000);
         final String contractURL = "http://" + HOST + REQUEST_PATH + "/order";
 
@@ -110,19 +111,34 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
                 .build();
 
         try (Response resp = client.newCall(request).execute()) {
-            Thread.sleep(5000);
-            assertTrue(resp.toString(), resp.isSuccessful());
-        } catch (IOException ex) {
+            if (resp.code() == 500) {
+                throw new ResponseExceptions.WebserverInternalErrorException("webserver internal error");
+            } else if (resp.code() == 401) {
+                throw new ResponseExceptions.UnauthorizedException("Check your api key, api signature and api expires are in sync");
+            } else if (resp.code() == 400) {
+                throw new ResponseExceptions.InvalidParameterException("leverage is too high");
+            }
+            Thread.sleep(1000);
+        } catch (IOException | InterruptedException ex) {
             fail("Error: " + ex);
         }
         return order;
     }
 
     @Override
-    public String getActiveOrder(String clOrdId) throws UnsupportedEncodingException {
-        String orderString = "Order";
+    public String getActiveOrder(String clOrdId) {
+        String orderString = "";
+        String contractURL = "";
         String expires = "" + (System.currentTimeMillis() + 60_000);
-        final String contractURL = "http://" + HOST + REQUEST_PATH + "/order?clOrdId=" + URLEncoder.encode(clOrdId, StandardCharsets.UTF_8.toString());
+
+        try {
+            contractURL = "http://" + HOST + REQUEST_PATH + "/order?clOrdId="
+                    + URLEncoder.encode(clOrdId, StandardCharsets.UTF_8.toString());
+
+        } catch (UnsupportedEncodingException ex) {
+            System.out.println(ex.toString());
+        }
+
         final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + "/order");
         final Request request = new Request.Builder()
                 .url(contractURL)
@@ -133,75 +149,47 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
                 .build();
 
         try (Response resp = client.newCall(request).execute()) {
-            Thread.sleep(5000);
-            assertTrue(resp.toString(), resp.isSuccessful());
-            assert resp.body() != null;
-            orderString += resp.body().string();
-        } catch (IOException | InterruptedException ex) {
+            if (resp.code() == 500) {
+                throw new ResponseExceptions.WebserverInternalErrorException("webserver internal error");
+            } else if (resp.code() == 401) {
+                throw new ResponseExceptions.UnauthorizedException("Check your api key, api signature and api expires are in sync");
+            } else if (resp.code() == 400 || resp.code() == 200 && resp.body() == null) {
+                throw new ResponseExceptions.InvalidParameterException("Order was not found");
+            } else if (resp.code() == 200) {
+                orderString += "Order" + resp.body().string();
+            }
+        } catch (IOException ex) {
             fail("Error: " + ex);
+        } finally {
+            return orderString;
         }
-        return orderString;
     }
 
     @Override
     public Book getOrderBook() {
-        String responseText;
-        String expires = "" + (System.currentTimeMillis() + 60_000);
-        final String contractURL = "http://" + HOST + REQUEST_PATH + "/orderBook";
-        final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + "/orderBook");
-        final Request request = new Request.Builder()
-                .url(contractURL)
-                .get()
-                .header("api-key", APIKEY)
-                .header("api-expires", expires)
-                .header("api-signature", signature)
-                .build();
-
-        try (Response resp = client.newCall(request).execute()) {
-            Thread.sleep(5000);
-            assertTrue(resp.toString(), resp.isSuccessful());
-            assert resp.body() != null;
-            responseText = (resp.body().string());
-            book = parser.fromJSONtoObj(responseText, Book.class);
-        } catch (IOException | InterruptedException ex) {
-            fail("Error: " + ex);
-        }
+        getOrderBook("BTC_USD_P0", 25);
         return book;
     }
 
     @Override
-    public Book getOrderBook(String symbol) throws UnsupportedEncodingException {
-        String responseText = "";
-        String expires = "" + (System.currentTimeMillis() + 60_000);
-        final String contractURL = "http://" + HOST + REQUEST_PATH + "/orderBook?symbol=" + URLEncoder.encode(symbol, StandardCharsets.UTF_8.toString());
-        final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + "/orderBook");
-        final Request request = new Request.Builder()
-                .url(contractURL)
-                .get()
-                .header("api-key", APIKEY)
-                .header("api-expires", expires)
-                .header("api-signature", signature)
-                .build();
-
-        try (Response resp = client.newCall(request).execute()) {
-            Thread.sleep(5000);
-            assertTrue(resp.toString(), resp.isSuccessful());
-            assert resp.body() != null;
-            responseText = (resp.body().string());
-            book = parser.fromJSONtoObj(responseText, Book.class);
-        } catch (IOException | InterruptedException ex) {
-            fail("Error: " + ex);
-        }
+    public Book getOrderBook(String symbol) {
+        getOrderBook(symbol, 25);
         return book;
     }
 
     @Override
-    public Book getOrderBook(String symbol, Integer level) throws UnsupportedEncodingException {
+    public Book getOrderBook(String symbol, Integer level) {
         String responseText = "";
+        String contractURL = "";
         String expires = "" + (System.currentTimeMillis() + 60_000);
-        final String contractURL = "http://" + HOST + REQUEST_PATH + "/orderBook?symbol="
-                + URLEncoder.encode(symbol, StandardCharsets.UTF_8.toString())
-                + "&level=" + URLEncoder.encode(String.valueOf(level), StandardCharsets.UTF_8.toString());
+        try {
+            contractURL = "http://" + HOST + REQUEST_PATH + "/orderBook?symbol="
+                    + URLEncoder.encode(symbol, StandardCharsets.UTF_8.toString())
+                    + "&level=" + URLEncoder.encode(String.valueOf(level), StandardCharsets.UTF_8.toString());
+        } catch (UnsupportedEncodingException ex) {
+            System.out.println(ex.toString());
+        }
+
         final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + "/orderBook");
         final Request request = new Request.Builder()
                 .url(contractURL)
@@ -212,20 +200,18 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
                 .build();
 
         try (Response resp = client.newCall(request).execute()) {
-            Thread.sleep(5000);
-            assertTrue(resp.toString(), resp.isSuccessful());
             assert resp.body() != null;
             responseText = (resp.body().string());
             book = parser.fromJSONtoObj(responseText, Book.class);
-        } catch (IOException | InterruptedException ex) {
+        } catch (IOException ex) {
             fail("Error: " + ex);
         }
         return book;
     }
 
-    public static void main(String[] args) throws InterruptedException, UnsupportedEncodingException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         TradeBook tBook = new TradeBook();
-        CreateOrder createOrder = new CreateOrder();
+        CreateOrder createOrder = new CreateOrder(100, "BTC_USD_P0", "SELL", 43800.0, 1.0, 2.0);
         tBook.webSocket();
         Order currentOrder = tBook.createOrder(createOrder);
         String orderID = currentOrder.clOrdID;
@@ -233,7 +219,6 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
 //        System.out.println(tBook.getOrderBook());
 //        System.out.println(tBook.getOrderBook("BTC_USD_P0"));
         System.out.println(tBook.getOrderBook("BTC_USD_P0", 1));
-
     }
 
 }

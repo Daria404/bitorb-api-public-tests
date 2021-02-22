@@ -1,16 +1,14 @@
 package com.bitorb.api.pub.tests;
 
-import java.io.UnsupportedEncodingException;
-
 interface OrderAPI {
-    public Order createOrder(CreateOrder createorder) throws InterruptedException;
+    Order createOrder(CreateOrder createorder);
 
-    public Book getOrderBook();
+    Book getOrderBook();
 
-    public Book getOrderBook(String symbol) throws UnsupportedEncodingException;
+    Book getOrderBook(String symbol);
 
-    public Book getOrderBook(String symbol, Integer level) throws UnsupportedEncodingException;
+    Book getOrderBook(String symbol, Integer level);
 
-    public String getActiveOrder(String clOrdId) throws UnsupportedEncodingException;
+    String getActiveOrder(String clOrdId);
 }
 

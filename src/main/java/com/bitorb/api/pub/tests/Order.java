@@ -1,5 +1,4 @@
 package com.bitorb.api.pub.tests;
-import java.lang.reflect.Field;
 
 public class Order {
     public String clOrdID;
@@ -51,14 +50,4 @@ public class Order {
                 '}';
     }
 
-     /*   public String toString(Object obj) throws IllegalAccessException {
-        StringBuilder objStringRepresentation = new StringBuilder();
-
-        for (Field field : obj.getClass().getDeclaredFields()) {
-            String key = field.getName();
-            String value = field.get(obj).toString();
-            objStringRepresentation.append(key).append(" : ").append(value).append("\n");
-        }
-        return (objStringRepresentation.toString());
-    }*/
 }
