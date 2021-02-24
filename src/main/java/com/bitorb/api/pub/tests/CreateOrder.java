@@ -1,9 +1,6 @@
 package com.bitorb.api.pub.tests;
 
-import net.openhft.chronicle.bytes.Bytes;
-import net.openhft.chronicle.wire.WireType;
-import net.openhft.chronicle.wire.Wires;
-import net.openhft.chronicle.wire.WriteMarshallable;
+import com.google.gson.Gson;
 
 public class CreateOrder {
     public long clientReqID;
@@ -23,21 +20,8 @@ public class CreateOrder {
         this.qty = qty;
     }
 
-    private CharSequence asJson(WriteMarshallable o) {
-        Bytes bytes = Wires.acquireBytes();
-        WireType.JSON.apply(bytes).getValueOut().marshallable(o);
-        return bytes;
-    }
-
     public String getBody() {
-        final String body = asJson(w -> w
-                .write("clientReqID").int64(this.clientReqID)
-                .write("symbol").text(this.symbol)
-                .write("side").text(this.side)
-                .write("qty").float64(this.qty)
-                .write("leverage").float64(this.leverage)
-                .write("price").float64(this.price)
-        ).toString();
-        return body;
+        Gson g = new Gson();
+        return g.toJson(this, CreateOrder.class);
     }
 }

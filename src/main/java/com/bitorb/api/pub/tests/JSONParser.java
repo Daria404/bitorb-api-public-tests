@@ -15,4 +15,5 @@ public class JSONParser {
             return g.fromJson(object, tClass);
         }
     }
+
 }

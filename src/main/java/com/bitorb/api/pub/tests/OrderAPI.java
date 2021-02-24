@@ -7,7 +7,7 @@ interface OrderAPI {
 
     Book getOrderBook(String symbol);
 
-    Book getOrderBook(String symbol, Integer level);
+    Object getOrderBook(String symbol, Integer level);
 
     String getActiveOrder(String clOrdId);
 }
