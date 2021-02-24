@@ -12,7 +12,6 @@ public class ResponseExceptions extends RuntimeException {
 
         public InvalidParameterException(String message, int code) {
             super(message, code);
-            System.out.print(message);
         }
 
     }
@@ -21,7 +20,6 @@ public class ResponseExceptions extends RuntimeException {
 
         public UnauthorizedException(String message, int code) {
             super(message, code);
-            System.out.print(message);
         }
     }
 
@@ -30,15 +28,12 @@ public class ResponseExceptions extends RuntimeException {
         public WebserverInternalErrorException(String message, int code) {
 
             super(message, code);
-            System.out.print(message);
         }
     }
 
     public static class EmptyBodyException extends ResponseExceptions {
         public EmptyBodyException(String message, int code) {
-
             super(message, code);
-            System.out.print(message);
         }
     }
 }

@@ -129,9 +129,9 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
     }
 
     @Override
-    public String getActiveOrder(String clOrdId) {
-        String orderString = "";
+    public Order getActiveOrder(String clOrdId) {
         String contractURL = "";
+        String responseText = "";
         RESOURCE_PATH = "/order";
         String expires = "" + (System.currentTimeMillis() + 60_000);
 
@@ -153,20 +153,12 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
                 .build();
 
         try (Response resp = client.newCall(request).execute()) {
-            if (resp.code() == 500) {
-                throw new ResponseExceptions.WebserverInternalErrorException("webserver internal error", 500);
-            } else if (resp.code() == 401) {
-                throw new ResponseExceptions.UnauthorizedException("Check your api key, api signature and api expires are in sync", 401);
-            } else if (resp.code() == 400 || resp.code() == 200 && resp.body() == null) {
-                throw new ResponseExceptions.InvalidParameterException("Order was not found", 400);
-            } else if (resp.code() == 200) {
-                orderString += "Order" + resp.body().string();
-            }
-        } catch (IOException ex) {
-            fail("Error: " + ex);
-        } finally {
-            return orderString;
+            checkResponseCode(resp);
+            responseText = (resp.body().string());
+        } catch (Exception ex) {
+            System.out.println(ex.toString());
         }
+        return parser.fromJSONtoObj(responseText, Order.class);
     }
 
     @Override
@@ -212,13 +204,23 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
         }
     }
 
+    public static void checkResponseCode(Response resp) {
+        if (resp.code() == 500) {
+            throw new ResponseExceptions.WebserverInternalErrorException("webserver internal error", 500);
+        } else if (resp.code() == 401) {
+            throw new ResponseExceptions.UnauthorizedException("Check your api key, api signature and api expires are in sync", 401);
+        } else if (resp.code() == 400 || resp.code() == 200 && resp.body() == null) {
+            throw new ResponseExceptions.InvalidParameterException("Order was not found", 400);
+        }
+    }
+
     public static void main(String[] args) {
         TradeBook tBook = new TradeBook();
         CreateOrder createOrder = new CreateOrder(100, "BTC_USD_P0", "BUY", 44600.0, 1.0, 2.0);
         tBook.webSocket();
         Order currentOrder = tBook.createOrder(createOrder);
         String orderID = currentOrder.clOrdID;
-        System.out.println(tBook.getActiveOrder(orderID));
+        System.out.println(tBook.getActiveOrder("orderID"));
 //        System.out.println(tBook.getOrderBook());
 //        System.out.println(tBook.getOrderBook("BTC_USD_P0"));
         System.out.println(tBook.getOrderBook("BTC_USD_P0", 1));
