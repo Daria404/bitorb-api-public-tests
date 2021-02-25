@@ -196,14 +196,19 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
             throw new ResponseExceptions.EmptyBodyException("Response body is empty", 200);
         }
     }
+    private static Headers buildHeaders(String expires, String signature) {
+        return  new Headers.Builder()
+                .add("api-key" , APIKEY)
+                .add("api-expires", expires)
+                .add("api-signature", signature)
+                .build();
+    }
 
     public static Request buildPostRequest(String URL, String body, String expires, String signature) {
         return new Request.Builder()
                 .url(URL)
                 .post(RequestBody.create(MediaType.get("application/json"), body))
-                .header("api-key", APIKEY)
-                .header("api-expires", expires)
-                .header("api-signature", signature)
+                .headers(buildHeaders(expires, signature))
                 .build();
     }
 
@@ -211,9 +216,7 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
         return new Request.Builder()
                 .url(URL)
                 .get()
-                .header("api-key", APIKEY)
-                .header("api-expires", expires)
-                .header("api-signature", signature)
+                .headers(buildHeaders(expires, signature))
                 .build();
     }
 
@@ -224,7 +227,7 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
         tBook.webSocket();
         Order currentOrder = tBook.createOrder(createOrder);
         String orderID = currentOrder.clOrdID;
-        System.out.println(tBook.getActiveOrder("orderID"));
+        System.out.println(tBook.getActiveOrder(orderID));
 //        System.out.println(tBook.getOrderBook());
 //        System.out.println(tBook.getOrderBook("BTC_USD_P0"));
         System.out.println(tBook.getOrderBook("BTC_USD_P0", 1));
