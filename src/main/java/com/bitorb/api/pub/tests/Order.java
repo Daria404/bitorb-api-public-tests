@@ -2,7 +2,7 @@ package com.bitorb.api.pub.tests;
 
 public class Order {
     public String clOrdID;
-    public String clientReqID;
+    public int clientReqID;
     public String symbol;
     public double created;
     public String username;

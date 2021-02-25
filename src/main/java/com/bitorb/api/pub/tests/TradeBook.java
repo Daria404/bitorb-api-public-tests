@@ -1,5 +1,6 @@
 package com.bitorb.api.pub.tests;
 
+import javafx.util.Builder;
 import net.openhft.chronicle.bytes.Bytes;
 import net.openhft.chronicle.wire.Wire;
 import net.openhft.chronicle.wire.WireType;
@@ -103,22 +104,11 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
 
         final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + RESOURCE_PATH + body);
 
-        final Request request = new Request.Builder()
-                .url(contractURL)
-                .post(RequestBody.create(MediaType.get("application/json"), body))
-                .header("api-key", APIKEY)
-                .header("api-expires", expires)
-                .header("api-signature", signature)
-                .build();
+        Request request = buildPostRequest(contractURL, body, expires, signature);
 
         try (Response resp = client.newCall(request).execute()) {
-            if (resp.code() == 500) {
-                throw new ResponseExceptions.WebserverInternalErrorException("webserver internal error", 500);
-            } else if (resp.code() == 401) {
-                throw new ResponseExceptions.UnauthorizedException("Check your api key, api signature and api expires are in sync", 401);
-            } else if (resp.code() == 400) {
-                throw new ResponseExceptions.InvalidParameterException("leverage is too high", 400);
-            }
+
+            checkResponseCode(resp);
             Thread.sleep(1000);
         } catch (IOException | InterruptedException ex) {
             fail("Error: " + ex);
@@ -129,9 +119,10 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
     }
 
     @Override
-    public Order getActiveOrder(String clOrdId) {
+    public String getActiveOrder(String clOrdId) {
         String contractURL = "";
         String responseText = "";
+        String orderString = "";
         RESOURCE_PATH = "/order";
         String expires = "" + (System.currentTimeMillis() + 60_000);
 
@@ -144,31 +135,25 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
         }
 
         final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + RESOURCE_PATH);
-        final Request request = new Request.Builder()
-                .url(contractURL)
-                .get()
-                .header("api-key", APIKEY)
-                .header("api-expires", expires)
-                .header("api-signature", signature)
-                .build();
+        Request request = buildGetRequest(contractURL, expires, signature);
 
         try (Response resp = client.newCall(request).execute()) {
             checkResponseCode(resp);
-            responseText = (resp.body().string());
+            orderString = "Order" + resp.body().string();
         } catch (Exception ex) {
-            System.out.println(ex.toString());
+            System.out.println("Get active order - " + ex.getMessage());
         }
-        return parser.fromJSONtoObj(responseText, Order.class);
+        return orderString;
     }
 
     @Override
     public Book getOrderBook() {
-        return getOrderBook("BTC_USD_P0", 25);
+        return getOrderBook("BTC_USD_P0", null);
     }
 
     @Override
     public Book getOrderBook(String symbol) {
-        return getOrderBook(symbol, 25);
+        return getOrderBook(symbol, null);
     }
 
     @Override
@@ -187,36 +172,55 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
         }
 
         final String signature = HashUtils.getSecretHash(APISECRET, APIKEY + expires + REQUEST_PATH + RESOURCE_PATH);
-        final Request request = new Request.Builder()
-                .url(contractURL)
-                .get()
-                .header("api-key", APIKEY)
-                .header("api-expires", expires)
-                .header("api-signature", signature)
-                .build();
+
+        Request request = buildGetRequest(contractURL, expires, signature);
 
         try (Response resp = client.newCall(request).execute()) {
-            assert resp.body() != null;
+            checkResponseCode(resp);
             responseText = (resp.body().string());
             return parser.fromJSONtoObj(responseText, Book.class);
         } catch (Exception ex) {
+            System.out.println("Get orderBook - " + ex.getMessage());
             return parser.fromJSONtoObj(responseText, Book.class);
         }
     }
 
     public static void checkResponseCode(Response resp) {
         if (resp.code() == 500) {
-            throw new ResponseExceptions.WebserverInternalErrorException("webserver internal error", 500);
+            throw new ResponseExceptions.WebserverInternalErrorException("Webserver internal error", 500);
         } else if (resp.code() == 401) {
             throw new ResponseExceptions.UnauthorizedException("Check your api key, api signature and api expires are in sync", 401);
-        } else if (resp.code() == 400 || resp.code() == 200 && resp.body() == null) {
-            throw new ResponseExceptions.InvalidParameterException("Order was not found", 400);
+        } else if (resp.code() == 400) {
+            throw new ResponseExceptions.InvalidParameterException("Invalid parameter", 400);
+        } else if (resp.code() == 200 && resp.body() == null) {
+            throw new ResponseExceptions.EmptyBodyException("Response body is empty", 200);
         }
     }
 
+    public static Request buildPostRequest(String URL, String body, String expires, String signature) {
+        return new Request.Builder()
+                .url(URL)
+                .post(RequestBody.create(MediaType.get("application/json"), body))
+                .header("api-key", APIKEY)
+                .header("api-expires", expires)
+                .header("api-signature", signature)
+                .build();
+    }
+
+    public static Request buildGetRequest(String URL, String expires, String signature) {
+        return new Request.Builder()
+                .url(URL)
+                .get()
+                .header("api-key", APIKEY)
+                .header("api-expires", expires)
+                .header("api-signature", signature)
+                .build();
+    }
+
+
     public static void main(String[] args) {
         TradeBook tBook = new TradeBook();
-        CreateOrder createOrder = new CreateOrder(100, "BTC_USD_P0", "BUY", 44600.0, 1.0, 2.0);
+        CreateOrder createOrder = new CreateOrder(100, "BTC_USD_P0", "BUY", 40000.0, 1.0, 2.0);
         tBook.webSocket();
         Order currentOrder = tBook.createOrder(createOrder);
         String orderID = currentOrder.clOrdID;
@@ -225,6 +229,10 @@ public class TradeBook extends WebSocketListener implements OrderAPI {
 //        System.out.println(tBook.getOrderBook("BTC_USD_P0"));
         System.out.println(tBook.getOrderBook("BTC_USD_P0", 1));
 
+        tBook.client.dispatcher().executorService().shutdown();
+        tBook.client.connectionPool().evictAll();
+        tBook.websocketClient.dispatcher().executorService().shutdown();
+        tBook.websocketClient.connectionPool().evictAll();
     }
 
 }

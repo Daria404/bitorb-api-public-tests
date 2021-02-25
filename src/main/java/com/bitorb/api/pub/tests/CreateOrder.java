@@ -3,7 +3,7 @@ package com.bitorb.api.pub.tests;
 import com.google.gson.Gson;
 
 public class CreateOrder {
-    public long clientReqID;
+    public int clientReqID;
     public String symbol;
     public String side;
     public double price;
@@ -11,7 +11,7 @@ public class CreateOrder {
     public double qty;
 
 
-    public CreateOrder(long clientReqID, String symbol, String side, double price, double leverage, double qty) {
+    public CreateOrder(int clientReqID, String symbol, String side, double price, double leverage, double qty) {
         this.clientReqID = clientReqID;
         this.symbol = symbol;
         this.side = side;

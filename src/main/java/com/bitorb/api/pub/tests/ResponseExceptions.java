@@ -2,10 +2,15 @@ package com.bitorb.api.pub.tests;
 
 public class ResponseExceptions extends RuntimeException {
     public int responseCode;
+    String message;
 
     public ResponseExceptions(String message, int code) {
-        super(message);
-        responseCode = code;
+        this.message = message;
+        this.responseCode = code;
+    }
+    @Override
+    public String getMessage() {
+        return message;
     }
 
     public static class InvalidParameterException extends ResponseExceptions {

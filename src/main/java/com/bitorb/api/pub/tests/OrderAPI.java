@@ -9,5 +9,5 @@ interface OrderAPI {
 
     Object getOrderBook(String symbol, Integer level);
 
-    Order getActiveOrder(String clOrdId);
+    String getActiveOrder(String clOrdId);
 }
